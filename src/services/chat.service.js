@@ -1,5 +1,6 @@
 import ChatHistory from "../models/ChatHistory.js";
 import ApiError from "../errors/ApiError.js";
+import ragService from "./rag.service.js";
 
 class ChatService {
     async askQuestion(userId, question) {
@@ -7,17 +8,19 @@ class ChatService {
             throw new ApiError(400, "Question is required");
         }
 
-        // Placeholder response until RAG is implemented
-        const answer =
-            "This feature is under development. AI-powered HR assistance will be available soon.";
+        const result =
+            await ragService.ask(question);
 
         const chat = await ChatHistory.create({
             user: userId,
             question,
-            answer,
+            answer: result.answer,
         });
 
-        return chat;
+        return {
+            ...chat.toObject(),
+            sources: result.sources,
+        };
     }
 
     async getChatHistory(userId) {

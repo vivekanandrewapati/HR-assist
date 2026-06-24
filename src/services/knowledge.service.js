@@ -3,6 +3,8 @@ import ApiError from "../errors/ApiError.js";
 import fs from "fs/promises";
 import path from "path";
 import mongoose from "mongoose";
+import vectorService from "./vector.service.js";
+import ingestionService from "./ingestion.service.js";
 
 class KnowledgeService {
     async uploadDocument(title, file) {
@@ -20,6 +22,7 @@ class KnowledgeService {
                 );
             }
 
+
             const document = await Document.create({
                 title,
                 originalFileName: file.originalname,
@@ -28,8 +31,13 @@ class KnowledgeService {
                 fileSize: file.size,
                 status: "processing",
             });
+            console.log("calling Ingestion Service");
+            await ingestionService.ingestDocument(
+                document._id
+            );
+            console.log("Ingestion Completed from Knowledge Service");
 
-            return document;
+            return await Document.findById(document._id);
 
         } catch (error) {
 
@@ -116,8 +124,13 @@ class KnowledgeService {
                     "A document with this title already exists"
                 );
             }
-
+            await vectorService.deleteDocumentVectors(
+                existingDocument._id
+            );
             await existingDocument.save();
+            await ingestionService.ingestDocument(
+                existingDocument._id
+            );
 
             await fs.unlink(oldFilePath).catch((err) => {
                 console.error("Failed to delete old document:", err.message);
@@ -142,7 +155,9 @@ class KnowledgeService {
         if (!document) {
             throw new ApiError(404, "Document not found");
         }
-
+        await vectorService.deleteDocumentVectors(
+            document._id
+        );
         await document.deleteOne();
 
         const filePath = path.join(
