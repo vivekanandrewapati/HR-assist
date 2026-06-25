@@ -1,0 +1,5 @@
+Route      → Which endpoint?
+Middleware → Validate/process file
+Controller → Handle HTTP
+Service    → Business logic
+Model      → Database
